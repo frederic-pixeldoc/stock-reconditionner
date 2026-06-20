@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PixelDoc — Stock reconditionnés</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --surface2: #22263a;
+      --border:   #2a2f45;
+      --accent:   #6ee7b7;
+      --accent4:  #60a5fa;
+      --dim:      #6b7280;
+      --text:     #e2e8f0;
+      --text2:    #94a3b8;
+      --red:      #f87171;
+      --orange:   #fb923c;
+      --violet:   #a78bfa;
+      --green:    #6ee7b7;
+    }
+
+    body {
+      font-family: 'DM Sans', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      position: sticky;
+      top: 36px;
+      z-index: 50;
+    }
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .logo span { color: var(--text2); font-family: 'DM Sans', sans-serif; font-weight: 400; font-size: .9rem; margin-left: .5rem; }
+    .header-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem; border-radius: 7px; font-size: .85rem; font-weight: 600; cursor: pointer; border: none; transition: all .15s; white-space: nowrap; }
+    .btn-primary { background: var(--accent); color: #0f1117; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+    .btn-ghost:hover { border-color: var(--accent4); color: var(--accent4); }
+    .btn-danger-outline { background: transparent; border: 1px solid rgba(248,113,113,.4); color: var(--red); }
+    .btn-danger-outline:hover { background: rgba(248,113,113,.1); }
+
+    /* ── Main ── */
+    main { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
+
+    /* ── Stats ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: .75rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .9rem 1.1rem;
+      border-left: 3px solid var(--border);
+    }
+    .stat-card.c-green  { border-left-color: var(--green); }
+    .stat-card.c-orange { border-left-color: var(--orange); }
+    .stat-card.c-red    { border-left-color: var(--red); }
+    .stat-card.c-violet { border-left-color: var(--violet); }
+    .stat-card.c-blue   { border-left-color: var(--accent4); }
+    .stat-label { font-size: .72rem; color: var(--dim); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
+    .stat-value { font-size: 1.7rem; font-weight: 700; margin-top: .2rem; line-height: 1.1; }
+
+    /* ── Filtres ── */
+    .filtres {
+      display: flex;
+      gap: .6rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    .filtres input, .filtres select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: .5rem .8rem;
+      font-size: .88rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit;
+    }
+    .filtres input { flex: 1; min-width: 220px; }
+    .filtres input:focus, .filtres select:focus { border-color: var(--accent4); }
+    .filtres select option { background: var(--surface2); }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: .5rem;
+      margin-bottom: .75rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    thead { background: var(--surface2); }
+    thead th {
+      padding: .7rem 1rem;
+      text-align: left;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--dim);
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    thead th.sortable { cursor: pointer; user-select: none; }
+    thead th.sortable:hover { color: var(--text); }
+    thead th .sort-icon { margin-left: .3rem; font-size: .85em; }
+    thead th.sort-active { color: var(--accent4); }
+
+    tbody tr { border-top: 1px solid var(--border); transition: background .1s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: .65rem 1rem; font-size: .88rem; vertical-align: middle; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: .18rem .55rem;
+      border-radius: 20px;
+      font-size: .73rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-stock   { background: rgba(110,231,183,.14); color: var(--green);  border: 1px solid rgba(110,231,183,.25); }
+    .badge-reserve { background: rgba(251,146,60,.14);  color: var(--orange); border: 1px solid rgba(251,146,60,.25); }
+    .badge-vendu   { background: rgba(248,113,113,.14); color: var(--red);    border: 1px solid rgba(248,113,113,.25); }
+    .badge-panne   { background: rgba(167,139,250,.14); color: var(--violet); border: 1px solid rgba(167,139,250,.25); }
+    .badge-garantie{ background: rgba(110,231,183,.12); color: var(--green);  border: 1px solid rgba(110,231,183,.2); font-size:.68rem; margin-top:.25rem; }
+    .badge-expire  { background: rgba(248,113,113,.12); color: var(--red);    border: 1px solid rgba(248,113,113,.2); font-size:.68rem; margin-top:.25rem; }
+
+    .etat-excellent { color: var(--green); font-weight: 600; }
+    .etat-bon       { color: var(--accent4); font-weight: 600; }
+    .etat-correct   { color: var(--orange); font-weight: 600; }
+
+    .marge-pos { color: var(--green); font-weight: 600; }
+    .marge-neg { color: var(--red); font-weight: 600; }
+
+    .actions { display: flex; gap: .3rem; align-items: center; }
+    .btn-icon {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: .28rem .5rem;
+      cursor: pointer;
+      font-size: .8rem;
+      color: var(--dim);
+      transition: all .15s;
+    }
+    .btn-icon:hover            { background: var(--surface2); color: var(--text); }
+    .btn-icon.btn-edit:hover   { border-color: var(--accent4); color: var(--accent4); }
+    .btn-icon.btn-del:hover    { border-color: var(--red); color: var(--red); }
+    .btn-icon.btn-pdf:hover    { border-color: var(--accent); color: var(--accent); }
+
+    .empty { text-align: center; padding: 3rem; color: var(--dim); font-size: .95rem; }
+
+    /* ── Modals ── */
+    .overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 580px;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+      animation: slideUp .18s ease;
+    }
+    .modal.modal-sm { max-width: 420px; }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    .modal-header {
+      padding: 1.1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 { font-size: 1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--dim); line-height: 1; padding: .1rem; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 1.4rem; }
+    .modal-body p { color: var(--text2); font-size: .93rem; line-height: 1.5; }
+
+    .modal-footer {
+      padding: .9rem 1.4rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: .6rem;
+    }
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: .5rem 1rem;
+      cursor: pointer;
+      font-size: .88rem;
+      color: var(--text2);
+      font-family: inherit;
+    }
+    .btn-cancel:hover { border-color: var(--text2); color: var(--text); }
+    .btn-save {
+      background: var(--accent);
+      color: #0f1117;
+      border: none;
+      border-radius: 7px;
+      padding: .5rem 1.3rem;
+      cursor: pointer;
+      font-size: .88rem;
+      font-weight: 700;
+      font-family: inherit;
+      transition: filter .15s;
+    }
+    .btn-save:hover { filter: brightness(1.1); }
+    .btn-confirm-danger {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: .5rem 1.3rem;
+      cursor: pointer;
+      font-size: .88rem;
+      font-weight: 700;
+      font-family: inherit;
+      transition: filter .15s;
+    }
+    .btn-confirm-danger:hover { filter: brightness(1.1); }
+
+    /* ── Form ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+    .form-full { grid-column: 1 / -1; }
+    .form-group label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--dim);
+      margin-bottom: .3rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: .5rem .75rem;
+      font-size: .88rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--accent4); }
+    .form-group select option { background: var(--surface2); }
+    .form-group textarea { resize: vertical; min-height: 68px; }
+
+    /* Champs conditionnels "vendu" */
+    #vendu-fields { transition: opacity .2s; }
+
+    /* ── Séparateur de section dans modal ── */
+    .form-section-title {
+      grid-column: 1/-1;
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--accent4);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: .4rem;
+      margin-top: .3rem;
+    }
+
+    /* ── Quota Banner ── */
+    #quota-banner {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 999;
+      background: #7f1d1d;
+      border-top: 2px solid var(--red);
+      padding: .9rem 1.2rem;
+      font-size: .85rem;
+      font-weight: 600;
+      color: #fecaca;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      text-align: center;
+    }
+    #quota-banner button {
+      background: none; border: 1px solid #fca5a5; color: #fecaca;
+      border-radius: 5px; padding: .2rem .6rem; cursor: pointer; font-size: .8rem;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: .6rem 1.2rem;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-weight: 500;
+      opacity: 0;
+      transition: all .25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 998;
+      box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .stat-value { font-size: 1.4rem; }
+      tbody td:nth-child(3),
+      tbody td:nth-child(6),
+      thead th:nth-child(3),
+      thead th:nth-child(6) { display: none; }
+    }
+
+    /* ── PD-NAVBAR ── */
+    .pd-navbar {
+      position: sticky; top: 0; z-index: 60;
+      background: #0a0d13; border-bottom: 1px solid var(--border);
+      height: 36px; display: flex; align-items: center;
+    }
+    .pd-navbar-inner { display: flex; align-items: center; gap: 2px; padding: 0 12px; }
+    .pd-nav-link {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 6px;
+      font-size: 12px; font-weight: 500;
+      color: var(--dim); text-decoration: none;
+      transition: all .15s; white-space: nowrap;
+    }
+    .pd-nav-link:hover { color: var(--text); background: var(--surface2); }
+    .pd-nav-active { color: var(--accent) !important; background: rgba(110,231,183,0.1) !important; }
+    @media (max-width: 480px) {
+      .pd-nav-link span { display: none; }
+      .pd-nav-link { font-size: 15px; padding: 4px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ PD-NAVBAR ═══════════════════════════════════════════════ -->
+<nav class="pd-navbar">
+  <div class="pd-navbar-inner">
+    <a href="https://pixeldoc-974.netlify.app" class="pd-nav-link" target="_blank" rel="noopener">🏠 <span>Vitrine</span></a>
+    <a href="https://pixeldoc-atelier.netlify.app" class="pd-nav-link" target="_blank" rel="noopener">🔧 <span>Atelier</span></a>
+    <a href="https://stock-reconditionner.netlify.app" class="pd-nav-link pd-nav-active" target="_blank" rel="noopener">📦 <span>Stock</span></a>
+    <a href="https://calculateur-pieces.netlify.app" class="pd-nav-link" target="_blank" rel="noopener">🧮 <span>Calculateur</span></a>
+    <a href="https://simulateur-de-prix.netlify.app" class="pd-nav-link" target="_blank" rel="noopener">💻 <span>Simulateur</span></a>
+  </div>
+</nav>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════ -->
+<header>
+  <div class="logo">PixelDoc <span>— Stock reconditionnés</span></div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" onclick="exporterBackup()" title="Exporter sauvegarde JSON">⬇ Sauvegarde</button>
+    <label class="btn btn-ghost" style="cursor:pointer" title="Restaurer sauvegarde JSON">
+      ⬆ Restaurer
+      <input type="file" accept=".json" style="display:none" onchange="importerBackup(this)">
+    </label>
+    <button class="btn btn-primary" onclick="ouvrirModal()">+ Ajouter un PC</button>
+  </div>
+</header>
+
+<!-- ══ MAIN ════════════════════════════════════════════════════ -->
+<main>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card c-green">
+      <div class="stat-label">En stock</div>
+      <div class="stat-value" id="stat-stock">0</div>
+    </div>
+    <div class="stat-card c-orange">
+      <div class="stat-label">Réservés</div>
+      <div class="stat-value" id="stat-reserve">0</div>
+    </div>
+    <div class="stat-card c-red">
+      <div class="stat-label">Vendus</div>
+      <div class="stat-value" id="stat-vendu">0</div>
+    </div>
+    <div class="stat-card c-violet">
+      <div class="stat-label">En panne</div>
+      <div class="stat-value" id="stat-panne">0</div>
+    </div>
+    <div class="stat-card c-blue">
+      <div class="stat-label">Valeur stock</div>
+      <div class="stat-value" id="stat-valeur" style="font-size:1.2rem">0 €</div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-label">Marge réalisée</div>
+      <div class="stat-value" id="stat-marge-realisee" style="font-size:1.2rem">0 €</div>
+    </div>
+    <div class="stat-card c-blue">
+      <div class="stat-label">Marge potentielle</div>
+      <div class="stat-value" id="stat-marge-potentielle" style="font-size:1.2rem">0 €</div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filtres">
+    <input type="text" id="recherche" placeholder="🔍  Rechercher marque, modèle, CPU…" oninput="renderTable()">
+    <select id="filtre-statut" onchange="renderTable()">
+      <option value="">Tous les statuts</option>
+      <option value="stock">En stock</option>
+      <option value="reserve">Réservé</option>
+      <option value="vendu">Vendu</option>
+      <option value="panne">En panne</option>
+    </select>
+    <select id="filtre-etat" onchange="renderTable()">
+      <option value="">Tous les états</option>
+      <option value="Excellent">Excellent</option>
+      <option value="Bon">Bon</option>
+      <option value="Correct">Correct</option>
+    </select>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-ghost" style="font-size:.82rem" onclick="exporterCSV()">⬇ CSV</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable sort-active" onclick="trierPar('marque')">Marque / Modèle <span class="sort-icon" id="sort-marque">▼</span></th>
+          <th class="sortable" onclick="trierPar('cpu')">CPU <span class="sort-icon" id="sort-cpu">⇅</span></th>
+          <th>Config</th>
+          <th class="sortable" onclick="trierPar('etat')">État <span class="sort-icon" id="sort-etat">⇅</span></th>
+          <th class="sortable" onclick="trierPar('statut')">Statut <span class="sort-icon" id="sort-statut">⇅</span></th>
+          <th class="sortable" onclick="trierPar('prixAchat')">Achat <span class="sort-icon" id="sort-prixAchat">⇅</span></th>
+          <th class="sortable" onclick="trierPar('prixVente')">Vente <span class="sort-icon" id="sort-prixVente">⇅</span></th>
+          <th>Marge</th>
+          <th class="sortable" onclick="trierPar('dateEntree')">Date <span class="sort-icon" id="sort-dateEntree">⇅</span></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- ══ MODAL PRINCIPAL (Ajout / Édition) ═══════════════════════ -->
+<div class="overlay" id="overlay" onclick="fermerModalSiDehors(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-titre">Ajouter un PC</h2>
+      <button class="modal-close" onclick="fermerModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>Marque *</label>
+          <input id="f-marque" type="text" placeholder="Dell, HP, Lenovo…">
+        </div>
+        <div class="form-group">
+          <label>Modèle *</label>
+          <input id="f-modele" type="text" placeholder="Latitude 5490, EliteBook 840…">
+        </div>
+        <div class="form-group form-full">
+          <label>CPU</label>
+          <input id="f-cpu" type="text" placeholder="Intel Core i5-8250U, Ryzen 5 3500U…">
+        </div>
+        <div class="form-group">
+          <label>RAM (Go)</label>
+          <select id="f-ram">
+            <option value="">—</option>
+            <option>4</option><option>8</option><option>16</option>
+            <option>32</option><option>64</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Stockage</label>
+          <input id="f-stockage" type="text" placeholder="256 Go SSD, 500 Go HDD…">
+        </div>
+        <div class="form-group">
+          <label>Écran</label>
+          <input id="f-ecran" type="text" placeholder='14" FHD, 15.6" HD…'>
+        </div>
+        <div class="form-group">
+          <label>OS</label>
+          <input id="f-os" type="text" placeholder="Windows 11 Pro, Sans OS…">
+        </div>
+        <div class="form-group">
+          <label>État</label>
+          <select id="f-etat">
+            <option value="">—</option>
+            <option>Excellent</option>
+            <option>Bon</option>
+            <option>Correct</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select id="f-statut" onchange="toggleVenduFields()">
+            <option value="stock">En stock</option>
+            <option value="reserve">Réservé</option>
+            <option value="vendu">Vendu</option>
+            <option value="panne">En panne</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date d'entrée</label>
+          <input id="f-date" type="date">
+        </div>
+        <div class="form-group">
+          <label>Prix d'achat (€)</label>
+          <input id="f-achat" type="number" min="0" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Prix de vente (€)</label>
+          <input id="f-vente" type="number" min="0" placeholder="0">
+        </div>
+
+        <!-- Champs conditionnels vendu -->
+        <div id="vendu-fields" class="form-full" style="display:none">
+          <div class="form-section-title">Informations de vente</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-top:.7rem">
+            <div class="form-group">
+              <label>Date de vente</label>
+              <input id="f-datevente" type="date">
+            </div>
+            <div class="form-group">
+              <label>Nom acheteur</label>
+              <input id="f-acheteur" type="text" placeholder="Prénom Nom…">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group form-full">
+          <label>Notes</label>
+          <textarea id="f-notes" placeholder="Rayures, batterie usée, chargeur inclus…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fermerModal()">Annuler</button>
+      <button class="btn-save" onclick="sauvegarder()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CONFIRMATION ══════════════════════════════════════ -->
+<div class="overlay" id="confirm-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>Confirmation</h2>
+      <button class="modal-close" onclick="annulerConfirm()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="annulerConfirm()">Annuler</button>
+      <button class="btn-confirm-danger" onclick="validerConfirm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ALERTE ════════════════════════════════════════════ -->
+<div class="overlay" id="alert-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-body" style="padding:1.8rem 1.4rem">
+      <p id="alert-msg"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-save" onclick="fermerAlert()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BANNIÈRE QUOTA ══════════════════════════════════════════ -->
+<div id="quota-banner">
+  ⚠️ Stockage local saturé — la sauvegarde a échoué. Supprime des fiches pour libérer de l'espace.
+  <button onclick="document.getElementById('quota-banner').style.display='none'">✕ Fermer</button>
+</div>
+
+<!-- ══ TOAST ═══════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<script>
+  /* ── État ─────────────────────────────────────────────── */
+  const CLE = 'pixeldoc_stock_v1';
+  let stock = [];
+  let editId = null;
+  let triColonne = 'dateEntree';
+  let triAsc = false;
+  let confirmCB = null;
+
+  try { stock = JSON.parse(localStorage.getItem(CLE) || '[]'); }
+  catch(e) { stock = []; }
+
+  /* ── Persistance ─────────────────────────────────────── */
+  function sauvegarderLocal() {
+    try {
+      localStorage.setItem(CLE, JSON.stringify(stock));
+    } catch(e) {
+      if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        const b = document.getElementById('quota-banner');
+        b.style.display = 'flex';
+      }
+    }
+  }
+
+  /* ── Toast ───────────────────────────────────────────── */
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  /* ── Modal Alerte (remplace alert) ───────────────────── */
+  function showAlert(msg) {
+    document.getElementById('alert-msg').textContent = msg;
+    document.getElementById('alert-overlay').classList.add('open');
+  }
+  function fermerAlert() {
+    document.getElementById('alert-overlay').classList.remove('open');
+  }
+
+  /* ── Modal Confirmation (remplace confirm) ───────────── */
+  function showConfirm(msg, cb) {
+    document.getElementById('confirm-msg').textContent = msg;
+    confirmCB = cb;
+    document.getElementById('confirm-overlay').classList.add('open');
+  }
+  function validerConfirm() {
+    document.getElementById('confirm-overlay').classList.remove('open');
+    if (confirmCB) confirmCB();
+    confirmCB = null;
+  }
+  function annulerConfirm() {
+    document.getElementById('confirm-overlay').classList.remove('open');
+    confirmCB = null;
+  }
+
+  /* ── Calculs ─────────────────────────────────────────── */
+  function marge(pc) {
+    return (Number(pc.prixVente) || 0) - (Number(pc.prixAchat) || 0);
+  }
+
+  function calcExpGarantie(dateVente) {
+    if (!dateVente) return null;
+    const d = new Date(dateVente);
+    d.setMonth(d.getMonth() + 3);
+    return d;
+  }
+
+  function garantieBadge(pc) {
+    if (pc.statut !== 'vendu' || !pc.dateVente) return '';
+    const exp = calcExpGarantie(pc.dateVente);
+    if (!exp) return '';
+    const expired = exp < new Date();
+    const ds = exp.toLocaleDateString('fr-FR');
+    return expired
+      ? `<br><span class="badge badge-expire">⚠ Exp. ${ds}</span>`
+      : `<br><span class="badge badge-garantie">✓ ${ds}</span>`;
+  }
+
+  /* ── Stats ───────────────────────────────────────────── */
+  function mettreAJourStats() {
+    const enStock  = stock.filter(p => p.statut === 'stock');
+    const reserves = stock.filter(p => p.statut === 'reserve');
+    const vendus   = stock.filter(p => p.statut === 'vendu');
+    const pannes   = stock.filter(p => p.statut === 'panne');
+
+    const valeur          = enStock.reduce((s, p) => s + (Number(p.prixVente) || 0), 0);
+    const margeRealisee   = vendus.reduce((s, p) => s + marge(p), 0);
+    const margePotentielle= [...enStock, ...reserves].reduce((s, p) => s + marge(p), 0);
+
+    document.getElementById('stat-stock').textContent   = enStock.length;
+    document.getElementById('stat-reserve').textContent = reserves.length;
+    document.getElementById('stat-vendu').textContent   = vendus.length;
+    document.getElementById('stat-panne').textContent   = pannes.length;
+    document.getElementById('stat-valeur').textContent  = valeur.toLocaleString('fr-FR') + ' €';
+
+    const mr = document.getElementById('stat-marge-realisee');
+    mr.textContent = (margeRealisee >= 0 ? '+' : '') + margeRealisee.toLocaleString('fr-FR') + ' €';
+    mr.style.color = margeRealisee >= 0 ? 'var(--green)' : 'var(--red)';
+
+    const mp = document.getElementById('stat-marge-potentielle');
+    mp.textContent = (margePotentielle >= 0 ? '+' : '') + margePotentielle.toLocaleString('fr-FR') + ' €';
+    mp.style.color = margePotentielle >= 0 ? 'var(--accent4)' : 'var(--red)';
+  }
+
+  /* ── Rendu table ─────────────────────────────────────── */
+  function renderTable() {
+    const q      = document.getElementById('recherche').value.toLowerCase();
+    const statut = document.getElementById('filtre-statut').value;
+    const etat   = document.getElementById('filtre-etat').value;
+
+    let liste = stock.filter(pc => {
+      const texte = `${pc.marque} ${pc.modele} ${pc.cpu} ${pc.notes} ${pc.acheteur || ''}`.toLowerCase();
+      return (!q      || texte.includes(q))
+          && (!statut || pc.statut === statut)
+          && (!etat   || pc.etat   === etat);
+    });
+
+    liste.sort((a, b) => {
+      let va = a[triColonne] ?? '';
+      let vb = b[triColonne] ?? '';
+      if (!isNaN(Number(va)) && !isNaN(Number(vb)) && va !== '' && vb !== '') {
+        va = Number(va); vb = Number(vb);
+      }
+      if (va < vb) return triAsc ? -1 :  1;
+      if (va > vb) return triAsc ?  1 : -1;
+      return 0;
+    });
+
+    const tbody = document.getElementById('tbody');
+    if (!liste.length) {
+      tbody.innerHTML = `<tr><td colspan="10" class="empty">Aucun PC trouvé</td></tr>`;
+      mettreAJourStats();
+      return;
+    }
+
+    const statutBadges = {
+      stock:   '<span class="badge badge-stock">En stock</span>',
+      reserve: '<span class="badge badge-reserve">Réservé</span>',
+      vendu:   '<span class="badge badge-vendu">Vendu</span>',
+      panne:   '<span class="badge badge-panne">En panne</span>',
+    };
+    const etatClass = { Excellent: 'etat-excellent', Bon: 'etat-bon', Correct: 'etat-correct' };
+
+    tbody.innerHTML = liste.map(pc => {
+      const m      = marge(pc);
+      const mClass = m >= 0 ? 'marge-pos' : 'marge-neg';
+      return `<tr>
+        <td><strong>${echap(pc.marque)}</strong><br><small style="color:var(--dim)">${echap(pc.modele)}</small></td>
+        <td style="color:var(--text2)">${echap(pc.cpu) || '—'}</td>
+        <td style="white-space:nowrap;color:var(--text2)">${pc.ram ? pc.ram + ' Go' : '—'} / ${echap(pc.stockage) || '—'}</td>
+        <td><span class="${etatClass[pc.etat] || ''}">${echap(pc.etat) || '—'}</span></td>
+        <td>${statutBadges[pc.statut] || ''}${garantieBadge(pc)}</td>
+        <td style="color:var(--text2)">${pc.prixAchat ? Number(pc.prixAchat).toLocaleString('fr-FR') + ' €' : '—'}</td>
+        <td>${pc.prixVente ? Number(pc.prixVente).toLocaleString('fr-FR') + ' €' : '—'}</td>
+        <td class="${mClass}">${(pc.prixAchat && pc.prixVente) ? (m >= 0 ? '+' : '') + m.toLocaleString('fr-FR') + ' €' : '—'}</td>
+        <td style="color:var(--dim);white-space:nowrap">${pc.dateEntree ? new Date(pc.dateEntree).toLocaleDateString('fr-FR') : '—'}</td>
+        <td>
+          <div class="actions">
+            <button class="btn-icon btn-edit" title="Modifier" onclick="editer('${pc.id}')">✏️</button>
+            <button class="btn-icon btn-del"  title="Supprimer" onclick="supprimer('${pc.id}')">🗑️</button>
+            <button class="btn-icon btn-pdf"  title="Fiche PDF" onclick="genererFichePDF('${pc.id}')">📄</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    mettreAJourStats();
+  }
+
+  function echap(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* ── Tri ─────────────────────────────────────────────── */
+  function trierPar(col) {
+    if (triColonne === col) triAsc = !triAsc;
+    else { triColonne = col; triAsc = true; }
+    mettreAJourSortIcons();
+    renderTable();
+  }
+
+  function mettreAJourSortIcons() {
+    const cols = ['marque','cpu','etat','statut','prixAchat','prixVente','dateEntree'];
+    cols.forEach(c => {
+      const el = document.getElementById('sort-' + c);
+      const th = el?.closest('th');
+      if (!el || !th) return;
+      if (c === triColonne) {
+        el.textContent = triAsc ? '▲' : '▼';
+        th.classList.add('sort-active');
+      } else {
+        el.textContent = '⇅';
+        th.classList.remove('sort-active');
+      }
+    });
+  }
+
+  /* ── Modal principal ─────────────────────────────────── */
+  function ouvrirModal(id = null) {
+    editId = id;
+    document.getElementById('modal-titre').textContent = id ? 'Modifier le PC' : 'Ajouter un PC';
+
+    const champIds = ['marque','modele','cpu','ram','stockage','ecran','os','etat','statut','achat','vente','date','notes'];
+    champIds.forEach(c => {
+      const el = document.getElementById('f-' + c);
+      if (el) el.value = '';
+    });
+    document.getElementById('f-datevente').value = '';
+    document.getElementById('f-acheteur').value  = '';
+    document.getElementById('f-statut').value = 'stock';
+    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+    if (id) {
+      const pc = stock.find(p => p.id === id);
+      if (pc) {
+        document.getElementById('f-marque').value   = pc.marque     || '';
+        document.getElementById('f-modele').value   = pc.modele     || '';
+        document.getElementById('f-cpu').value      = pc.cpu        || '';
+        document.getElementById('f-ram').value      = pc.ram        || '';
+        document.getElementById('f-stockage').value = pc.stockage   || '';
+        document.getElementById('f-ecran').value    = pc.ecran      || '';
+        document.getElementById('f-os').value       = pc.os         || '';
+        document.getElementById('f-etat').value     = pc.etat       || '';
+        document.getElementById('f-statut').value   = pc.statut     || 'stock';
+        document.getElementById('f-achat').value    = pc.prixAchat  || '';
+        document.getElementById('f-vente').value    = pc.prixVente  || '';
+        document.getElementById('f-date').value     = pc.dateEntree || '';
+        document.getElementById('f-notes').value    = pc.notes      || '';
+        document.getElementById('f-datevente').value= pc.dateVente  || '';
+        document.getElementById('f-acheteur').value = pc.acheteur   || '';
+      }
+    }
+
+    toggleVenduFields();
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  function fermerModal() {
+    document.getElementById('overlay').classList.remove('open');
+    editId = null;
+  }
+
+  function fermerModalSiDehors(e) {
+    if (e.target === document.getElementById('overlay')) fermerModal();
+  }
+
+  /* ── Champs conditionnels "vendu" ────────────────────── */
+  function toggleVenduFields() {
+    const isVendu = document.getElementById('f-statut').value === 'vendu';
+    const vf = document.getElementById('vendu-fields');
+    vf.style.display = isVendu ? '' : 'none';
+    if (isVendu && !document.getElementById('f-datevente').value) {
+      document.getElementById('f-datevente').value = new Date().toISOString().split('T')[0];
+    }
+  }
+
+  /* ── Sauvegarder un PC ───────────────────────────────── */
+  function sauvegarder() {
+    const marque = document.getElementById('f-marque').value.trim();
+    const modele = document.getElementById('f-modele').value.trim();
+    if (!marque || !modele) {
+      showAlert('La marque et le modèle sont obligatoires.');
+      return;
+    }
+    const pc = {
+      id:          editId || Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      marque,
+      modele,
+      cpu:        document.getElementById('f-cpu').value.trim(),
+      ram:        document.getElementById('f-ram').value,
+      stockage:   document.getElementById('f-stockage').value.trim(),
+      ecran:      document.getElementById('f-ecran').value.trim(),
+      os:         document.getElementById('f-os').value.trim(),
+      etat:       document.getElementById('f-etat').value,
+      statut:     document.getElementById('f-statut').value,
+      prixAchat:  document.getElementById('f-achat').value,
+      prixVente:  document.getElementById('f-vente').value,
+      dateEntree: document.getElementById('f-date').value,
+      notes:      document.getElementById('f-notes').value.trim(),
+      dateVente:  document.getElementById('f-datevente').value,
+      acheteur:   document.getElementById('f-acheteur').value.trim(),
+    };
+
+    if (editId) {
+      const idx = stock.findIndex(p => p.id === editId);
+      if (idx !== -1) stock[idx] = pc;
+    } else {
+      stock.unshift(pc);
+    }
+
+    sauvegarderLocal();
+    fermerModal();
+    renderTable();
+    showToast(editId ? 'PC modifié.' : 'PC ajouté au stock.');
+  }
+
+  /* ── Éditer / Supprimer ──────────────────────────────── */
+  function editer(id) { ouvrirModal(id); }
+
+  function supprimer(id) {
+    const pc = stock.find(p => p.id === id);
+    if (!pc) return;
+    showConfirm(`Supprimer "${pc.marque} ${pc.modele}" du stock ?`, () => {
+      stock = stock.filter(p => p.id !== id);
+      sauvegarderLocal();
+      renderTable();
+      showToast('PC supprimé.');
+    });
+  }
+
+  /* ── Export CSV ─────────────────────────────────────── */
+  function exporterCSV() {
+    const entetes = ['Marque','Modèle','CPU','RAM (Go)','Stockage','Écran','OS','État','Statut','Prix achat','Prix vente','Marge','Date entrée','Date vente','Acheteur','Notes'];
+    const statutLabel = { stock: 'En stock', reserve: 'Réservé', vendu: 'Vendu', panne: 'En panne' };
+    const lignes = stock.map(p => [
+      p.marque, p.modele, p.cpu, p.ram, p.stockage, p.ecran, p.os,
+      p.etat, statutLabel[p.statut] || p.statut,
+      p.prixAchat, p.prixVente, marge(p),
+      p.dateEntree, p.dateVente, p.acheteur, p.notes
+    ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(';'));
+
+    const csv  = '﻿' + [entetes.join(';'), ...lignes].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `pixeldoc_stock_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Export CSV téléchargé.');
+  }
+
+  /* ── Backup / Restore ────────────────────────────────── */
+  function exporterBackup() {
+    const data = {
+      _version: 1,
+      _date: new Date().toISOString(),
+      _source: 'pixeldoc_stock',
+      pixeldoc_stock_v1: stock,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `pixeldoc_stock_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Sauvegarde exportée.');
+  }
+
+  function importerBackup(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data.pixeldoc_stock_v1)) {
+          showAlert('Fichier invalide ou incompatible.');
+          return;
+        }
+        const dateStr = data._date ? new Date(data._date).toLocaleString('fr-FR') : 'date inconnue';
+        showConfirm(
+          `Restaurer la sauvegarde du ${dateStr} ? Le stock actuel (${stock.length} PC) sera écrasé.`,
+          () => {
+            stock = data.pixeldoc_stock_v1;
+            sauvegarderLocal();
+            renderTable();
+            showToast(`${stock.length} PC restaurés.`);
+          }
+        );
+      } catch(err) {
+        showAlert('Erreur de lecture du fichier JSON.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ── Fiche PDF ───────────────────────────────────────── */
+  function genererFichePDF(id) {
+    if (typeof window.jspdf === 'undefined') {
+      showAlert('Le module PDF est indisponible (connexion internet requise).');
+      return;
+    }
+    const pc = stock.find(p => p.id === id);
+    if (!pc) return;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210;
+
+    /* — En-tête PixelDoc — */
+    doc.setFillColor(15, 17, 23);
+    doc.rect(0, 0, W, 38, 'F');
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(110, 231, 183);
+    doc.text('PIXELDOC', 15, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text('Saint-Denis, La Réunion  •  06 93 04 87 62  •  fredericbartholo@yahoo.fr', 15, 26);
+    doc.setTextColor(200, 200, 200);
+    doc.text('Fiche produit — PC reconditionné', 15, 33);
+
+    /* — Titre PC — */
+    doc.setFontSize(17);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 37, 48);
+    doc.text(`${pc.marque} ${pc.modele}`, 15, 52);
+
+    /* — Badge état — */
+    if (pc.etat) {
+      const etatColor = { Excellent: [22,163,74], Bon: [37,99,235], Correct: [217,119,6] }[pc.etat] || [100,100,100];
+      doc.setFillColor(...etatColor);
+      doc.roundedRect(15, 55, 30, 7, 2, 2, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255,255,255);
+      doc.text(pc.etat, 18, 60.5);
+    }
+
+    /* — Ligne de séparation — */
+    doc.setDrawColor(210, 220, 235);
+    doc.line(15, 67, W - 15, 67);
+
+    /* — Specs — */
+    let y = 76;
+    doc.setFontSize(9);
+    const specs = [
+      ['CPU',       pc.cpu],
+      ['RAM',       pc.ram ? pc.ram + ' Go' : null],
+      ['Stockage',  pc.stockage],
+      ['Écran',     pc.ecran],
+      ['OS',        pc.os],
+    ].filter(([, v]) => v);
+
+    specs.forEach(([k, v]) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text(k, 15, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 37, 48);
+      doc.text(String(v), 45, y);
+      y += 7;
+    });
+
+    /* — Prix — */
+    if (pc.prixVente) {
+      y += 4;
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(15, y - 5, 60, 14, 3, 3, 'F');
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(22, 163, 74);
+      doc.text(`${Number(pc.prixVente).toLocaleString('fr-FR')} €`, 18, y + 5);
+      if (pc.prixAchat) {
+        const m = marge(pc);
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Achat : ${Number(pc.prixAchat).toLocaleString('fr-FR')} €  |  Marge : ${m >= 0 ? '+' : ''}${m.toLocaleString('fr-FR')} €`, 15, y + 14);
+      }
+      y += 20;
+    }
+
+    /* — Infos vente & garantie — */
+    if (pc.statut === 'vendu' && pc.dateVente) {
+      y += 4;
+      doc.setDrawColor(210, 220, 235);
+      doc.line(15, y, W - 15, y);
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 37, 48);
+      doc.text('Informations de vente', 15, y);
+      y += 7;
+
+      const exp = calcExpGarantie(pc.dateVente);
+      const expired = exp && exp < new Date();
+      const rows = [
+        ['Vendu le',    new Date(pc.dateVente).toLocaleDateString('fr-FR')],
+        ['Acheteur',    pc.acheteur || '—'],
+        ['Garantie MO', exp ? `${expired ? '⚠ Expirée le ' : 'Valable jusqu\'au '}${exp.toLocaleDateString('fr-FR')}` : '—'],
+      ];
+      doc.setFontSize(9);
+      rows.forEach(([k, v]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(100, 116, 139);
+        doc.text(k, 15, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(expired && k === 'Garantie MO' ? 220 : 30, 30, 30);
+        doc.text(v, 55, y);
+        y += 7;
+      });
+    }
+
+    /* — Notes — */
+    if (pc.notes) {
+      y += 4;
+      doc.setDrawColor(210, 220, 235);
+      doc.line(15, y, W - 15, y);
+      y += 8;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Notes', 15, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 37, 48);
+      const lines = doc.splitTextToSize(pc.notes, W - 30);
+      doc.text(lines, 15, y);
+    }
+
+    /* — Pied de page — */
+    const pH = doc.internal.pageSize.height;
+    doc.setFillColor(15, 17, 23);
+    doc.rect(0, pH - 14, W, 14, 'F');
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(110, 231, 183);
+    doc.text('PixelDoc — Reconditionnement & Réparation informatique — La Réunion', 15, pH - 5);
+    doc.setTextColor(148, 163, 184);
+    const today = new Date().toLocaleDateString('fr-FR');
+    doc.text(`Fiche éditée le ${today}`, W - 15, pH - 5, { align: 'right' });
+
+    const nomFichier = `fiche_${pc.marque}_${pc.modele}_${new Date().toISOString().slice(0,10)}.pdf`
+      .toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.\-]/g, '');
+    doc.save(nomFichier);
+    showToast('Fiche PDF générée.');
+  }
+
+  /* ── Init ────────────────────────────────────────────── */
+  mettreAJourSortIcons();
+  renderTable();
+</script>
+</body>
+</html>
