@@ -7,6 +7,11 @@
 <meta name="description" content="Suivi du stock de PC reconditionnés (achat, vente, marge) : outil interne PixelDoc, Saint-Denis (La Réunion).">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stock">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236ee7b7'/%3E%3Cstop offset='1' stop-color='%2360a5fa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f1117'/%3E%3Crect x='9' y='9' width='6' height='6' fill='%236ee7b7' opacity='.6'/%3E%3Crect x='17' y='13' width='5' height='5' fill='%236ee7b7' opacity='.85'/%3E%3Cpath d='M24 52V16h14a11 11 0 0 1 0 22H24' fill='none' stroke='url(%23g)' stroke-width='8' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='51' cy='18' r='4' fill='%23fb923c'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1200,6 +1205,9 @@
   /* ── Init ────────────────────────────────────────────── */
   mettreAJourSortIcons();
   renderTable();
+</script>
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>
 </body>
 </html>
