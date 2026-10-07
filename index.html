@@ -1,12 +1,17 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PixelDoc — Stock reconditionnés</title>
+<meta name="description" content="Suivi du stock de PC reconditionnés (achat, vente, marge) : outil interne PixelDoc, Saint-Denis (La Réunion).">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f1117">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236ee7b7'/%3E%3Cstop offset='1' stop-color='%2360a5fa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f1117'/%3E%3Crect x='9' y='9' width='6' height='6' fill='%236ee7b7' opacity='.6'/%3E%3Crect x='17' y='13' width='5' height='5' fill='%236ee7b7' opacity='.85'/%3E%3Cpath d='M24 52V16h14a11 11 0 0 1 0 22H24' fill='none' stroke='url(%23g)' stroke-width='8' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='51' cy='18' r='4' fill='%23fb923c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -17,7 +22,7 @@
       --border:   #2a2f45;
       --accent:   #6ee7b7;
       --accent4:  #60a5fa;
-      --dim:      #6b7280;
+      --dim:      #94a3b8;
       --text:     #e2e8f0;
       --text2:    #94a3b8;
       --red:      #f87171;
@@ -396,18 +401,32 @@
       .pd-nav-link span { display: none; }
       .pd-nav-link { font-size: 15px; padding: 4px 8px; }
     }
-  </style>
+  
+/* ===== ACCESSIBILITÉ & MOBILE (audit) ===== */
+.skip-link{position:absolute;left:-9999px;top:6px;background:#6ee7b7;color:#0f1117;padding:8px 14px;border-radius:6px;font-weight:700;z-index:1000;}
+.skip-link:focus{left:8px;}
+:focus-visible{outline:2px solid #6ee7b7;outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;}}
+@media(max-width:600px){
+  input,select,textarea{font-size:16px!important;}
+  header{height:auto;min-height:64px;padding:.6rem 1rem;flex-wrap:wrap;}
+  .header-actions .btn{padding:.45rem .7rem;font-size:.8rem;}
+  .filtres input{min-width:0;flex:1 1 100%;}
+  .filtres select{flex:1 1 40%;min-width:0;}
+}
+</style>
 </head>
 <body>
 
 <!-- ══ PD-NAVBAR ═══════════════════════════════════════════════ -->
-<nav class="pd-navbar">
+<a class="skip-link" href="#main">Aller au contenu</a>
+<nav class="pd-navbar" aria-label="Sites PixelDoc">
   <div class="pd-navbar-inner">
-    <a href="https://frederic-pixeldoc.github.io/pixeldoc-974/" class="pd-nav-link" target="_blank" rel="noopener">🏠 <span>Vitrine</span></a>
-    <a href="https://frederic-pixeldoc.github.io/pixeldoc-atelier/" class="pd-nav-link" target="_blank" rel="noopener">🔧 <span>Atelier</span></a>
-    <a href="https://frederic-pixeldoc.github.io/stock-reconditionner/" class="pd-nav-link pd-nav-active" target="_blank" rel="noopener">📦 <span>Stock</span></a>
-    <a href="https://frederic-pixeldoc.github.io/calculateur-pieces/" class="pd-nav-link" target="_blank" rel="noopener">🧮 <span>Calculateur</span></a>
-    <a href="https://frederic-pixeldoc.github.io/simulateur-de-prix/" class="pd-nav-link" target="_blank" rel="noopener">💻 <span>Simulateur</span></a>
+    <a href="https://pixeldoc-974.netlify.app/" class="pd-nav-link" target="_blank" rel="noopener">🏠 <span>Vitrine</span></a>
+    <a href="https://pixeldoc-atelier.netlify.app/" class="pd-nav-link" target="_blank" rel="noopener">🔧 <span>Atelier</span></a>
+    <a href="https://stock-reconditionner.netlify.app/" class="pd-nav-link pd-nav-active" target="_blank" rel="noopener">📦 <span>Stock</span></a>
+    <a href="https://calculateur-pieces.netlify.app/" class="pd-nav-link" target="_blank" rel="noopener">🧮 <span>Calculateur</span></a>
+    <a href="https://simulateur-de-prix.netlify.app/" class="pd-nav-link" target="_blank" rel="noopener">💻 <span>Simulateur</span></a>
   </div>
 </nav>
 
@@ -418,14 +437,14 @@
     <button class="btn btn-ghost" onclick="exporterBackup()" title="Exporter sauvegarde JSON">⬇ Sauvegarde</button>
     <label class="btn btn-ghost" style="cursor:pointer" title="Restaurer sauvegarde JSON">
       ⬆ Restaurer
-      <input type="file" accept=".json" style="display:none" onchange="importerBackup(this)">
+      <input type="file" accept=".json" aria-label="Restaurer une sauvegarde" style="display:none" onchange="importerBackup(this)">
     </label>
     <button class="btn btn-primary" onclick="ouvrirModal()">+ Ajouter un PC</button>
   </div>
 </header>
 
 <!-- ══ MAIN ════════════════════════════════════════════════════ -->
-<main>
+<main id="main">
 
   <!-- Stats -->
   <div class="stats">
@@ -461,15 +480,15 @@
 
   <!-- Filtres -->
   <div class="filtres">
-    <input type="text" id="recherche" placeholder="🔍  Rechercher marque, modèle, CPU…" oninput="renderTable()">
-    <select id="filtre-statut" onchange="renderTable()">
+    <input type="search" aria-label="Rechercher" id="recherche" placeholder="🔍  Rechercher marque, modèle, CPU…" oninput="renderTable()">
+    <select aria-label="Filtrer par statut" id="filtre-statut" onchange="renderTable()">
       <option value="">Tous les statuts</option>
       <option value="stock">En stock</option>
       <option value="reserve">Réservé</option>
       <option value="vendu">Vendu</option>
       <option value="panne">En panne</option>
     </select>
-    <select id="filtre-etat" onchange="renderTable()">
+    <select aria-label="Filtrer par état" id="filtre-etat" onchange="renderTable()">
       <option value="">Tous les états</option>
       <option value="Excellent">Excellent</option>
       <option value="Bon">Bon</option>
@@ -487,15 +506,15 @@
     <table>
       <thead>
         <tr>
-          <th class="sortable sort-active" onclick="trierPar('marque')">Marque / Modèle <span class="sort-icon" id="sort-marque">▼</span></th>
-          <th class="sortable" onclick="trierPar('cpu')">CPU <span class="sort-icon" id="sort-cpu">⇅</span></th>
+          <th class="sortable sort-active" tabindex="0" role="button" onclick="trierPar('marque')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trierPar('marque')}">Marque / Modèle <span class="sort-icon" id="sort-marque">▼</span></th>
+          <th class="sortable" tabindex="0" role="button" onclick="trierPar('cpu')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trierPar('cpu')}">CPU <span class="sort-icon" id="sort-cpu">⇅</span></th>
           <th>Config</th>
-          <th class="sortable" onclick="trierPar('etat')">État <span class="sort-icon" id="sort-etat">⇅</span></th>
-          <th class="sortable" onclick="trierPar('statut')">Statut <span class="sort-icon" id="sort-statut">⇅</span></th>
-          <th class="sortable" onclick="trierPar('prixAchat')">Achat <span class="sort-icon" id="sort-prixAchat">⇅</span></th>
-          <th class="sortable" onclick="trierPar('prixVente')">Vente <span class="sort-icon" id="sort-prixVente">⇅</span></th>
+          <th class="sortable" tabindex="0" role="button" onclick="trierPar('etat')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trierPar('etat')}">État <span class="sort-icon" id="sort-etat">⇅</span></th>
+          <th class="sortable" tabindex="0" role="button" onclick="trierPar('statut')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trierPar('statut')}">Statut <span class="sort-icon" id="sort-statut">⇅</span></th>
+          <th class="sortable" tabindex="0" role="button" onclick="trierPar('prixAchat')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trierPar('prixAchat')}">Achat <span class="sort-icon" id="sort-prixAchat">⇅</span></th>
+          <th class="sortable" tabindex="0" role="button" onclick="trierPar('prixVente')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trierPar('prixVente')}">Vente <span class="sort-icon" id="sort-prixVente">⇅</span></th>
           <th>Marge</th>
-          <th class="sortable" onclick="trierPar('dateEntree')">Date <span class="sort-icon" id="sort-dateEntree">⇅</span></th>
+          <th class="sortable" tabindex="0" role="button" onclick="trierPar('dateEntree')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trierPar('dateEntree')}">Date <span class="sort-icon" id="sort-dateEntree">⇅</span></th>
           <th></th>
         </tr>
       </thead>
@@ -505,29 +524,29 @@
 </main>
 
 <!-- ══ MODAL PRINCIPAL (Ajout / Édition) ═══════════════════════ -->
-<div class="overlay" id="overlay" onclick="fermerModalSiDehors(event)">
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="Fiche PC" onclick="fermerModalSiDehors(event)">
   <div class="modal">
     <div class="modal-header">
       <h2 id="modal-titre">Ajouter un PC</h2>
-      <button class="modal-close" onclick="fermerModal()">×</button>
+      <button class="modal-close" aria-label="Fermer" onclick="fermerModal()">×</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
 
         <div class="form-group">
-          <label>Marque *</label>
+          <label for="f-marque">Marque *</label>
           <input id="f-marque" type="text" placeholder="Dell, HP, Lenovo…">
         </div>
         <div class="form-group">
-          <label>Modèle *</label>
+          <label for="f-modele">Modèle *</label>
           <input id="f-modele" type="text" placeholder="Latitude 5490, EliteBook 840…">
         </div>
         <div class="form-group form-full">
-          <label>CPU</label>
+          <label for="f-cpu">CPU</label>
           <input id="f-cpu" type="text" placeholder="Intel Core i5-8250U, Ryzen 5 3500U…">
         </div>
         <div class="form-group">
-          <label>RAM (Go)</label>
+          <label for="f-ram">RAM (Go)</label>
           <select id="f-ram">
             <option value="">—</option>
             <option>4</option><option>8</option><option>16</option>
@@ -535,19 +554,19 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Stockage</label>
+          <label for="f-stockage">Stockage</label>
           <input id="f-stockage" type="text" placeholder="256 Go SSD, 500 Go HDD…">
         </div>
         <div class="form-group">
-          <label>Écran</label>
+          <label for="f-ecran">Écran</label>
           <input id="f-ecran" type="text" placeholder='14" FHD, 15.6" HD…'>
         </div>
         <div class="form-group">
-          <label>OS</label>
+          <label for="f-os">OS</label>
           <input id="f-os" type="text" placeholder="Windows 11 Pro, Sans OS…">
         </div>
         <div class="form-group">
-          <label>État</label>
+          <label for="f-etat">État</label>
           <select id="f-etat">
             <option value="">—</option>
             <option>Excellent</option>
@@ -556,7 +575,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Statut</label>
+          <label for="f-statut">Statut</label>
           <select id="f-statut" onchange="toggleVenduFields()">
             <option value="stock">En stock</option>
             <option value="reserve">Réservé</option>
@@ -565,15 +584,15 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Date d'entrée</label>
+          <label for="f-date">Date d'entrée</label>
           <input id="f-date" type="date">
         </div>
         <div class="form-group">
-          <label>Prix d'achat (€)</label>
+          <label for="f-achat">Prix d'achat (€)</label>
           <input id="f-achat" type="number" min="0" placeholder="0">
         </div>
         <div class="form-group">
-          <label>Prix de vente (€)</label>
+          <label for="f-vente">Prix de vente (€)</label>
           <input id="f-vente" type="number" min="0" placeholder="0">
         </div>
 
@@ -582,18 +601,18 @@
           <div class="form-section-title">Informations de vente</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-top:.7rem">
             <div class="form-group">
-              <label>Date de vente</label>
+              <label for="f-datevente">Date de vente</label>
               <input id="f-datevente" type="date">
             </div>
             <div class="form-group">
-              <label>Nom acheteur</label>
+              <label for="f-acheteur">Nom acheteur</label>
               <input id="f-acheteur" type="text" placeholder="Prénom Nom…">
             </div>
           </div>
         </div>
 
         <div class="form-group form-full">
-          <label>Notes</label>
+          <label for="f-notes">Notes</label>
           <textarea id="f-notes" placeholder="Rayures, batterie usée, chargeur inclus…"></textarea>
         </div>
       </div>
@@ -606,11 +625,11 @@
 </div>
 
 <!-- ══ MODAL CONFIRMATION ══════════════════════════════════════ -->
-<div class="overlay" id="confirm-overlay">
+<div class="overlay" id="confirm-overlay" role="alertdialog" aria-modal="true" aria-label="Confirmation">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2>Confirmation</h2>
-      <button class="modal-close" onclick="annulerConfirm()">×</button>
+      <button class="modal-close" aria-label="Fermer" onclick="annulerConfirm()">×</button>
     </div>
     <div class="modal-body">
       <p id="confirm-msg"></p>
@@ -641,7 +660,7 @@
 </div>
 
 <!-- ══ TOAST ═══════════════════════════════════════════════════ -->
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
   /* ── État ─────────────────────────────────────────────── */
@@ -803,9 +822,9 @@
         <td style="color:var(--dim);white-space:nowrap">${pc.dateEntree ? new Date(pc.dateEntree).toLocaleDateString('fr-FR') : '—'}</td>
         <td>
           <div class="actions">
-            <button class="btn-icon btn-edit" title="Modifier" onclick="editer('${pc.id}')">✏️</button>
-            <button class="btn-icon btn-del"  title="Supprimer" onclick="supprimer('${pc.id}')">🗑️</button>
-            <button class="btn-icon btn-pdf"  title="Fiche PDF" onclick="genererFichePDF('${pc.id}')">📄</button>
+            <button class="btn-icon btn-edit" title="Modifier" aria-label="Modifier" onclick="editer('${pc.id}')">✏️</button>
+            <button class="btn-icon btn-del"  title="Supprimer" aria-label="Supprimer" onclick="supprimer('${pc.id}')">🗑️</button>
+            <button class="btn-icon btn-pdf"  title="Fiche PDF" aria-label="Fiche PDF" onclick="genererFichePDF('${pc.id}')">📄</button>
           </div>
         </td>
       </tr>`;
