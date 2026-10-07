@@ -419,6 +419,11 @@
   .filtres input{min-width:0;flex:1 1 100%;}
   .filtres select{flex:1 1 40%;min-width:0;}
 }
+    /* ── Rappel de sauvegarde ── */
+    .backup-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: rgba(251,146,60,.10); border: 1px solid var(--orange); border-radius: 12px; padding: 12px 16px; margin-bottom: 1rem; }
+    .backup-banner .bb-txt { font-size: .85rem; line-height: 1.5; flex: 1 1 260px; }
+    .backup-banner .bb-act { display: flex; gap: 8px; flex-wrap: wrap; }
+    @media (max-width: 700px) { .backup-banner .bb-act { width: 100%; } .backup-banner .bb-act .btn { flex: 1; justify-content: center; } }
 </style>
 </head>
 <body>
@@ -450,6 +455,15 @@
 
 <!-- ══ MAIN ════════════════════════════════════════════════════ -->
 <main id="main">
+
+  <!-- Rappel de sauvegarde -->
+  <div class="backup-banner" id="backupBanner" role="status" style="display:none">
+    <div class="bb-txt" id="backupBannerTxt"></div>
+    <div class="bb-act">
+      <button class="btn btn-primary" onclick="exporterBackup()">💾 Sauvegarder maintenant</button>
+      <button class="btn btn-ghost" onclick="reporterBackup()">Plus tard</button>
+    </div>
+  </div>
 
   <!-- Stats -->
   <div class="stats">
@@ -683,6 +697,7 @@
   function sauvegarderLocal() {
     try {
       localStorage.setItem(CLE, JSON.stringify(stock));
+      if (typeof majBackupBanner === 'function') majBackupBanner();
     } catch(e) {
       if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
         const b = document.getElementById('quota-banner');
@@ -1002,6 +1017,27 @@
   }
 
   /* ── Backup / Restore ────────────────────────────────── */
+  /* ── Rappel de sauvegarde ─────────────────────────────── */
+  const BACKUP_DELAI_JOURS = 7;
+  function majBackupBanner() {
+    const el = document.getElementById('backupBanner'); if (!el) return;
+    const dernier = localStorage.getItem('pixeldoc_stock_last_backup');
+    const reporte = +localStorage.getItem('pixeldoc_stock_backup_snooze') || 0;
+    const jours = dernier ? Math.floor((Date.now() - new Date(dernier).getTime()) / 86400000) : null;
+    const du = stock.length > 0 && (jours === null || jours >= BACKUP_DELAI_JOURS) && Date.now() > reporte;
+    el.style.display = du ? 'flex' : 'none';
+    if (du) {
+      el.querySelector('#backupBannerTxt').innerHTML = (jours === null
+        ? '<strong>Aucune sauvegarde faite.</strong> '
+        : `<strong>Dernière sauvegarde il y a ${jours} jour${jours > 1 ? 's' : ''}.</strong> `)
+        + `Tes ${stock.length} PC ne sont enregistrés que sur cet appareil : si le navigateur est réinitialisé ou le téléphone perdu, ils disparaissent.`;
+    }
+  }
+  function reporterBackup() {
+    try { localStorage.setItem('pixeldoc_stock_backup_snooze', String(Date.now() + 86400000)); } catch(e) {}
+    majBackupBanner();
+  }
+
   function exporterBackup() {
     const data = {
       _version: 1,
@@ -1016,6 +1052,8 @@
     a.download = `pixeldoc_stock_backup_${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    try { localStorage.setItem('pixeldoc_stock_last_backup', new Date().toISOString()); localStorage.removeItem('pixeldoc_stock_backup_snooze'); } catch(e) {}
+    majBackupBanner();
     showToast('Sauvegarde exportée.');
   }
 
@@ -1038,6 +1076,8 @@
             stock = data.pixeldoc_stock_v1;
             sauvegarderLocal();
             renderTable();
+            try { localStorage.setItem('pixeldoc_stock_last_backup', data._date || new Date().toISOString()); } catch(e) {}
+            majBackupBanner();
             showToast(`${stock.length} PC restaurés.`);
           }
         );
@@ -1205,6 +1245,7 @@
   /* ── Init ────────────────────────────────────────────── */
   mettreAJourSortIcons();
   renderTable();
+  majBackupBanner();
 </script>
 <script>
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
