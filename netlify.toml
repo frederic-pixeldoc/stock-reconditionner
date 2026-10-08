@@ -1,3 +1,8 @@
+# Builds Netlify suspendus (crédit épuisé) : le site est servi gratuitement par GitHub Pages.
+# Pour réactiver Netlify : supprimer le bloc [build] ci-dessous.
+[build]
+  ignore = "exit 0"
+
 # Configuration Netlify
 [[headers]]
   for = "/sw.js"
