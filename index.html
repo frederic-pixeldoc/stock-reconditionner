@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700&display=swap" rel="stylesheet">
+  <script src="stock-core.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -488,14 +489,29 @@
       <div class="stat-value" id="stat-valeur" style="font-size:1.2rem">0 €</div>
     </div>
     <div class="stat-card c-green">
-      <div class="stat-label">Marge réalisée</div>
+      <div class="stat-label">Marge totale (vendus)</div>
       <div class="stat-value" id="stat-marge-realisee" style="font-size:1.2rem">0 €</div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-label">Marge moyenne / PC</div>
+      <div class="stat-value" id="stat-marge-moyenne" style="font-size:1.2rem">—</div>
+    </div>
+    <div class="stat-card c-violet">
+      <div class="stat-label">Durée moy. en stock</div>
+      <div class="stat-value" id="stat-duree" style="font-size:1.2rem">—</div>
+    </div>
+    <div class="stat-card c-red">
+      <div class="stat-label">Immobilisés &gt; 60 j</div>
+      <div class="stat-value" id="stat-immobilises" style="font-size:1.2rem">0</div>
     </div>
     <div class="stat-card c-blue">
       <div class="stat-label">Marge potentielle</div>
       <div class="stat-value" id="stat-marge-potentielle" style="font-size:1.2rem">0 €</div>
     </div>
   </div>
+
+  <div id="immobilises-liste" class="backup-banner" role="status" style="display:none"><div class="bb-txt" id="immobilises-txt"></div></div>
+  <div id="stat-note" style="display:none;color:var(--dim);font-size:.8rem;margin:-1rem 0 1rem"></div>
 
   <!-- Filtres -->
   <div class="filtres">
@@ -615,6 +631,16 @@
           <input id="f-vente" type="number" min="0" placeholder="0">
         </div>
 
+        <div class="form-full">
+          <div class="form-section-title">Coûts de remise en état (optionnel, comme dans le simulateur)</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.9rem;margin-top:.7rem">
+            <div class="form-group"><label for="f-pieces">Pièces (€)</label><input id="f-pieces" type="number" min="0" step="any" placeholder="0"></div>
+            <div class="form-group"><label for="f-octroi">Octroi de mer (%)</label><input id="f-octroi" type="number" min="0" step="any" placeholder="0"></div>
+            <div class="form-group"><label for="f-heures">Heures de MO</label><input id="f-heures" type="number" min="0" step="any" placeholder="0"></div>
+            <div class="form-group"><label for="f-taux">Taux horaire (€)</label><input id="f-taux" type="number" min="0" step="any" placeholder="0"></div>
+          </div>
+        </div>
+
         <!-- Champs conditionnels vendu -->
         <div id="vendu-fields" class="form-full" style="display:none">
           <div class="form-section-title">Informations de vente</div>
@@ -683,26 +709,38 @@
 
 <script>
   /* ── État ─────────────────────────────────────────────── */
-  const CLE = 'pixeldoc_stock_v1';
+  const Core = StockCore;
+  const CLE = Core.CLE_STOCK;
   let stock = [];
   let editId = null;
   let triColonne = 'dateEntree';
   let triAsc = false;
   let confirmCB = null;
 
-  try { stock = JSON.parse(localStorage.getItem(CLE) || '[]'); }
-  catch(e) { stock = []; }
+  let chargementCorrompu = false;
+  try {
+    const brut = localStorage.getItem(CLE) || '[]';
+    try { stock = Core.nettoyerStock(JSON.parse(brut)).stock; }
+    catch(e) {
+      // données illisibles : on les garde de côté plutôt que de les écraser à la prochaine sauvegarde
+      chargementCorrompu = true;
+      try { localStorage.setItem(CLE + '_corrompu', brut); } catch(e2) {}
+      stock = [];
+    }
+  } catch(e) { stock = []; }
 
   /* ── Persistance ─────────────────────────────────────── */
   function sauvegarderLocal() {
     try {
       localStorage.setItem(CLE, JSON.stringify(stock));
       if (typeof majBackupBanner === 'function') majBackupBanner();
+      return true;
     } catch(e) {
       if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
         const b = document.getElementById('quota-banner');
         b.style.display = 'flex';
       }
+      return false;
     }
   }
 
@@ -740,9 +778,9 @@
   }
 
   /* ── Calculs ─────────────────────────────────────────── */
-  function marge(pc) {
-    return (Number(pc.prixVente) || 0) - (Number(pc.prixAchat) || 0);
-  }
+  /* Règles de marge/TVA partagées avec le simulateur de prix : voir stock-core.js */
+  const marge = Core.marge; // null si prix d'achat ou de vente manquant
+  const fmtMarge = m => (m >= 0 ? '+' : '') + m.toLocaleString('fr-FR') + ' €';
 
   function calcExpGarantie(dateVente) {
     if (!dateVente) return null;
@@ -770,8 +808,9 @@
     const pannes   = stock.filter(p => p.statut === 'panne');
 
     const valeur          = enStock.reduce((s, p) => s + (Number(p.prixVente) || 0), 0);
-    const margeRealisee   = vendus.reduce((s, p) => s + marge(p), 0);
-    const margePotentielle= [...enStock, ...reserves].reduce((s, p) => s + marge(p), 0);
+    const st = Core.statsTableauDeBord(stock, new Date());
+    const margeRealisee    = st.margeTotale;
+    const margePotentielle = st.margePotentielle;
 
     document.getElementById('stat-stock').textContent   = enStock.length;
     document.getElementById('stat-reserve').textContent = reserves.length;
@@ -786,6 +825,24 @@
     const mp = document.getElementById('stat-marge-potentielle');
     mp.textContent = (margePotentielle >= 0 ? '+' : '') + margePotentielle.toLocaleString('fr-FR') + ' €';
     mp.style.color = margePotentielle >= 0 ? 'var(--accent4)' : 'var(--red)';
+
+    const mm = document.getElementById('stat-marge-moyenne');
+    mm.textContent = st.margeMoyenne === null ? '—' : fmtMarge(Math.round(st.margeMoyenne * 100) / 100);
+    mm.style.color = st.margeMoyenne === null ? '' : st.margeMoyenne >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('stat-duree').textContent = st.dureeMoyenneJours === null ? '—'
+      : Math.round(st.dureeMoyenneJours).toLocaleString('fr-FR') + ' j';
+    document.getElementById('stat-immobilises').textContent = st.immobilises.length;
+
+    const liste = document.getElementById('immobilises-liste');
+    liste.style.display = st.immobilises.length ? 'flex' : 'none';
+    document.getElementById('immobilises-txt').innerHTML = st.immobilises.length
+      ? `<strong>${st.immobilises.length} PC immobilisé${st.immobilises.length > 1 ? 's' : ''} depuis plus de ${Core.SEUIL_IMMOBILISE_JOURS} jours :</strong> `
+        + st.immobilises.map(x => `${echap(x.pc.marque)} ${echap(x.pc.modele)} (${x.jours} j)`).join(', ')
+      : '';
+    const note = document.getElementById('stat-note');
+    note.style.display = st.nbVendusSansPrix ? '' : 'none';
+    note.textContent = st.nbVendusSansPrix
+      ? `${st.nbVendusSansPrix} PC vendu${st.nbVendusSansPrix > 1 ? 's' : ''} sans prix d'achat ou de vente : exclu${st.nbVendusSansPrix > 1 ? 's' : ''} des marges.` : '';
   }
 
   /* ── Rendu table ─────────────────────────────────────── */
@@ -829,7 +886,7 @@
 
     tbody.innerHTML = liste.map(pc => {
       const m      = marge(pc);
-      const mClass = m >= 0 ? 'marge-pos' : 'marge-neg';
+      const mClass = m !== null && m < 0 ? 'marge-neg' : 'marge-pos';
       return `<tr>
         <td><strong>${echap(pc.marque)}</strong><br><small style="color:var(--dim)">${echap(pc.modele)}</small></td>
         <td style="color:var(--text2)">${echap(pc.cpu) || '—'}</td>
@@ -838,7 +895,7 @@
         <td>${statutBadges[pc.statut] || ''}${garantieBadge(pc)}</td>
         <td style="color:var(--text2)">${pc.prixAchat ? Number(pc.prixAchat).toLocaleString('fr-FR') + ' €' : '—'}</td>
         <td>${pc.prixVente ? Number(pc.prixVente).toLocaleString('fr-FR') + ' €' : '—'}</td>
-        <td class="${mClass}">${(pc.prixAchat && pc.prixVente) ? (m >= 0 ? '+' : '') + m.toLocaleString('fr-FR') + ' €' : '—'}</td>
+        <td class="${mClass}">${m === null ? '—' : fmtMarge(m)}</td>
         <td style="color:var(--dim);white-space:nowrap">${pc.dateEntree ? new Date(pc.dateEntree).toLocaleDateString('fr-FR') : '—'}</td>
         <td>
           <div class="actions">
@@ -854,7 +911,7 @@
   }
 
   function echap(str) {
-    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   /* ── Tri ─────────────────────────────────────────────── */
@@ -886,7 +943,7 @@
     editId = id;
     document.getElementById('modal-titre').textContent = id ? 'Modifier le PC' : 'Ajouter un PC';
 
-    const champIds = ['marque','modele','cpu','ram','stockage','ecran','os','etat','statut','achat','vente','date','notes'];
+    const champIds = ['marque','modele','cpu','ram','stockage','ecran','os','etat','statut','achat','vente','date','notes','pieces','octroi','heures','taux'];
     champIds.forEach(c => {
       const el = document.getElementById('f-' + c);
       if (el) el.value = '';
@@ -914,6 +971,10 @@
         document.getElementById('f-notes').value    = pc.notes      || '';
         document.getElementById('f-datevente').value= pc.dateVente  || '';
         document.getElementById('f-acheteur').value = pc.acheteur   || '';
+        document.getElementById('f-pieces').value   = pc.pieces     || '';
+        document.getElementById('f-octroi').value   = pc.octroi     || '';
+        document.getElementById('f-heures').value   = pc.heures     || '';
+        document.getElementById('f-taux').value     = pc.taux       || '';
       }
     }
 
@@ -965,6 +1026,10 @@
       notes:      document.getElementById('f-notes').value.trim(),
       dateVente:  document.getElementById('f-datevente').value,
       acheteur:   document.getElementById('f-acheteur').value.trim(),
+      pieces:     document.getElementById('f-pieces').value,
+      octroi:     document.getElementById('f-octroi').value,
+      heures:     document.getElementById('f-heures').value,
+      taux:       document.getElementById('f-taux').value,
     };
 
     if (editId) {
@@ -995,24 +1060,19 @@
   }
 
   /* ── Export CSV ─────────────────────────────────────── */
-  function exporterCSV() {
-    const entetes = ['Marque','Modèle','CPU','RAM (Go)','Stockage','Écran','OS','État','Statut','Prix achat','Prix vente','Marge','Date entrée','Date vente','Acheteur','Notes'];
-    const statutLabel = { stock: 'En stock', reserve: 'Réservé', vendu: 'Vendu', panne: 'En panne' };
-    const lignes = stock.map(p => [
-      p.marque, p.modele, p.cpu, p.ram, p.stockage, p.ecran, p.os,
-      p.etat, statutLabel[p.statut] || p.statut,
-      p.prixAchat, p.prixVente, marge(p),
-      p.dateEntree, p.dateVente, p.acheteur, p.notes
-    ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(';'));
-
-    const csv  = '﻿' + [entetes.join(';'), ...lignes].join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  function telecharger(contenu, type, nom) {
+    const blob = new Blob([contenu], { type });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href = url;
-    a.download = `pixeldoc_stock_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = nom;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function exporterCSV() {
+    if (!stock.length) { showAlert('Le stock est vide : rien à exporter.'); return; }
+    telecharger(Core.genererCSV(stock, new Date()), 'text/csv;charset=utf-8;', `pixeldoc_stock_${new Date().toISOString().slice(0,10)}.csv`);
     showToast('Export CSV téléchargé.');
   }
 
@@ -1039,19 +1099,8 @@
   }
 
   function exporterBackup() {
-    const data = {
-      _version: 1,
-      _date: new Date().toISOString(),
-      _source: 'pixeldoc_stock',
-      pixeldoc_stock_v1: stock,
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `pixeldoc_stock_backup_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    telecharger(JSON.stringify(Core.creerSauvegarde(stock, new Date()), null, 2), 'application/json',
+      `pixeldoc_stock_backup_${new Date().toISOString().slice(0,10)}.json`);
     try { localStorage.setItem('pixeldoc_stock_last_backup', new Date().toISOString()); localStorage.removeItem('pixeldoc_stock_backup_snooze'); } catch(e) {}
     majBackupBanner();
     showToast('Sauvegarde exportée.');
@@ -1062,190 +1111,36 @@
     if (!file) return;
     input.value = '';
     const reader = new FileReader();
+    reader.onerror = () => showAlert('Impossible de lire le fichier.');
     reader.onload = e => {
-      try {
-        const data = JSON.parse(e.target.result);
-        if (!Array.isArray(data.pixeldoc_stock_v1)) {
-          showAlert('Fichier invalide ou incompatible.');
-          return;
-        }
-        const dateStr = data._date ? new Date(data._date).toLocaleString('fr-FR') : 'date inconnue';
-        showConfirm(
-          `Restaurer la sauvegarde du ${dateStr} ? Le stock actuel (${stock.length} PC) sera écrasé.`,
-          () => {
-            stock = data.pixeldoc_stock_v1;
-            sauvegarderLocal();
-            renderTable();
-            try { localStorage.setItem('pixeldoc_stock_last_backup', data._date || new Date().toISOString()); } catch(e) {}
-            majBackupBanner();
-            showToast(`${stock.length} PC restaurés.`);
+      const r = Core.lireSauvegarde(e.target.result);
+      if (!r.ok) { showAlert(r.erreur); return; }
+      const dateStr = r.date ? new Date(r.date).toLocaleString('fr-FR') : 'date inconnue';
+      showConfirm(
+        `Restaurer la sauvegarde du ${dateStr} (${r.stock.length} PC${r.ignorees ? `, ${r.ignorees} fiche(s) inexploitable(s) ignorée(s)` : ''}) ? Le stock actuel (${stock.length} PC) sera écrasé.`,
+        () => {
+          const avant = stock;
+          stock = r.stock;
+          if (!sauvegarderLocal()) {
+            stock = avant; // l'enregistrement a échoué : on ne laisse pas croire que c'est restauré
+            showAlert("Restauration impossible : le navigateur n'a pas pu enregistrer les données. Le stock actuel est conservé.");
+            return;
           }
-        );
-      } catch(err) {
-        showAlert('Erreur de lecture du fichier JSON.');
-      }
+          renderTable();
+          try { localStorage.setItem('pixeldoc_stock_last_backup', r.date || new Date().toISOString()); } catch(e) {}
+          majBackupBanner();
+          showToast(`${stock.length} PC restaurés.`);
+        }
+      );
     };
     reader.readAsText(file);
-  }
-
-  /* ── Fiche PDF ───────────────────────────────────────── */
-  function genererFichePDF(id) {
-    if (typeof window.jspdf === 'undefined') {
-      showAlert('Le module PDF est indisponible (connexion internet requise).');
-      return;
-    }
-    const pc = stock.find(p => p.id === id);
-    if (!pc) return;
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const W = 210;
-
-    /* — En-tête PixelDoc — */
-    doc.setFillColor(15, 17, 23);
-    doc.rect(0, 0, W, 38, 'F');
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(110, 231, 183);
-    doc.text('PIXELDOC', 15, 18);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(148, 163, 184);
-    doc.text('Saint-Denis, La Réunion  •  06 93 04 87 62  •  fredericbartholo@yahoo.fr', 15, 26);
-    doc.setTextColor(200, 200, 200);
-    doc.text('Fiche produit — PC reconditionné', 15, 33);
-
-    /* — Titre PC — */
-    doc.setFontSize(17);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 37, 48);
-    doc.text(`${pc.marque} ${pc.modele}`, 15, 52);
-
-    /* — Badge état — */
-    if (pc.etat) {
-      const etatColor = { Excellent: [22,163,74], Bon: [37,99,235], Correct: [217,119,6] }[pc.etat] || [100,100,100];
-      doc.setFillColor(...etatColor);
-      doc.roundedRect(15, 55, 30, 7, 2, 2, 'F');
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(255,255,255);
-      doc.text(pc.etat, 18, 60.5);
-    }
-
-    /* — Ligne de séparation — */
-    doc.setDrawColor(210, 220, 235);
-    doc.line(15, 67, W - 15, 67);
-
-    /* — Specs — */
-    let y = 76;
-    doc.setFontSize(9);
-    const specs = [
-      ['CPU',       pc.cpu],
-      ['RAM',       pc.ram ? pc.ram + ' Go' : null],
-      ['Stockage',  pc.stockage],
-      ['Écran',     pc.ecran],
-      ['OS',        pc.os],
-    ].filter(([, v]) => v);
-
-    specs.forEach(([k, v]) => {
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(100, 116, 139);
-      doc.text(k, 15, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(30, 37, 48);
-      doc.text(String(v), 45, y);
-      y += 7;
-    });
-
-    /* — Prix — */
-    if (pc.prixVente) {
-      y += 4;
-      doc.setFillColor(240, 253, 244);
-      doc.roundedRect(15, y - 5, 60, 14, 3, 3, 'F');
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(22, 163, 74);
-      doc.text(`${Number(pc.prixVente).toLocaleString('fr-FR')} €`, 18, y + 5);
-      if (pc.prixAchat) {
-        const m = marge(pc);
-        doc.setFontSize(8);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Achat : ${Number(pc.prixAchat).toLocaleString('fr-FR')} €  |  Marge : ${m >= 0 ? '+' : ''}${m.toLocaleString('fr-FR')} €`, 15, y + 14);
-      }
-      y += 20;
-    }
-
-    /* — Infos vente & garantie — */
-    if (pc.statut === 'vendu' && pc.dateVente) {
-      y += 4;
-      doc.setDrawColor(210, 220, 235);
-      doc.line(15, y, W - 15, y);
-      y += 8;
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 37, 48);
-      doc.text('Informations de vente', 15, y);
-      y += 7;
-
-      const exp = calcExpGarantie(pc.dateVente);
-      const expired = exp && exp < new Date();
-      const rows = [
-        ['Vendu le',    new Date(pc.dateVente).toLocaleDateString('fr-FR')],
-        ['Acheteur',    pc.acheteur || '—'],
-        ['Garantie MO', exp ? `${expired ? '⚠ Expirée le ' : 'Valable jusqu\'au '}${exp.toLocaleDateString('fr-FR')}` : '—'],
-      ];
-      doc.setFontSize(9);
-      rows.forEach(([k, v]) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(100, 116, 139);
-        doc.text(k, 15, y);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(expired && k === 'Garantie MO' ? 220 : 30, 30, 30);
-        doc.text(v, 55, y);
-        y += 7;
-      });
-    }
-
-    /* — Notes — */
-    if (pc.notes) {
-      y += 4;
-      doc.setDrawColor(210, 220, 235);
-      doc.line(15, y, W - 15, y);
-      y += 8;
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(100, 116, 139);
-      doc.text('Notes', 15, y);
-      y += 6;
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(30, 37, 48);
-      const lines = doc.splitTextToSize(pc.notes, W - 30);
-      doc.text(lines, 15, y);
-    }
-
-    /* — Pied de page — */
-    const pH = doc.internal.pageSize.height;
-    doc.setFillColor(15, 17, 23);
-    doc.rect(0, pH - 14, W, 14, 'F');
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(110, 231, 183);
-    doc.text('PixelDoc — Reconditionnement & Réparation informatique — La Réunion', 15, pH - 5);
-    doc.setTextColor(148, 163, 184);
-    const today = new Date().toLocaleDateString('fr-FR');
-    doc.text(`Fiche éditée le ${today}`, W - 15, pH - 5, { align: 'right' });
-
-    const nomFichier = `fiche_${pc.marque}_${pc.modele}_${new Date().toISOString().slice(0,10)}.pdf`
-      .toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.\-]/g, '');
-    doc.save(nomFichier);
-    showToast('Fiche PDF générée.');
   }
 
   /* ── Init ────────────────────────────────────────────── */
   mettreAJourSortIcons();
   renderTable();
   majBackupBanner();
+  if (chargementCorrompu) showAlert('Les données enregistrées sur cet appareil sont illisibles. Une copie a été gardée à part ; restaure ta dernière sauvegarde JSON.');
 </script>
 <script>
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
